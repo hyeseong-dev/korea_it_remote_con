@@ -1,0 +1,44 @@
+# Local connection details and credentials
+academy-pc-access.txt
+*-access.txt
+*.anydeskid
+.env
+.env.*
+!.env.example
+*.local
+*.local.*
+.secrets/
+private/
+
+# SSH / certificate material
+.ssh/
+id_rsa*
+id_ed25519*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs, recordings, screenshots, and temporary files
+*.log
+*.trace
+*.anydesk
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.mov
+*.bak
+*.tmp
+*~
+.DS_Store
+
+# Portable launcher: private profiles, generated shortcuts, Python build artifacts
+*.local.json
+.local/
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.egg-info/
