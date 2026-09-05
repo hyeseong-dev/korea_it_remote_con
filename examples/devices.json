@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "devices": {
+    "academy": {
+      "label": "Academy PC",
+      "routes": [
+        {"name": "primary", "provider": "anydesk", "transport": "tailscale", "endpoint": "pc.example.invalid"},
+        {"name": "fallback", "provider": "anydesk", "transport": "vendor-relay", "endpoint": "123456789"}
+      ],
+      "authentication": {"mode": "application-managed"}
+    }
+  }
+}
