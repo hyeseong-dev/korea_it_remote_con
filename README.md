@@ -114,8 +114,6 @@ WireGuard 사설망 ─────────────── 원격 Windows
 ```powershell
 git clone https://github.com/hyeseong-dev/korea_it_remote_con.git
 cd korea_it_remote_con
-
-# 이 개발 브랜치가 GitHub에 푸시된 이후
 git fetch origin feature/windows-gui-go
 git switch --track origin/feature/windows-gui-go
 
@@ -147,7 +145,7 @@ wails build -clean -platform windows/amd64 -webview2 embed
 | `v2.0.0` | `feature/portable-access-v2` | Tailscale + AnyDesk 기반 Python 공통 CLI |
 | `v3.0.0-alpha.1` | `feature/windows-gui-go` | WireGuard + AnyDesk 기반 Windows Go GUI |
 
-현재 `feature/windows-gui-go` 브랜치는 아직 로컬에만 있습니다. 따라서 위 원격 브랜치 전환 명령은 이 변경을 검토·커밋하고 GitHub에 푸시한 이후 사용할 수 있습니다.
+`feature/windows-gui-go`는 GitHub 원격 브랜치로 공개되어 있으며, 위 명령으로 다른 PC에서도 동일한 개발 버전을 체크아웃할 수 있습니다.
 
 기존 Python CLI와 실행기는 이 브랜치에서도 제거하지 않았습니다. v2의 기준 구현과 설명은 `feature/portable-access-v2` 브랜치에서 확인할 수 있습니다.
 
