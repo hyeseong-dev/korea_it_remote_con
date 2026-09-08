@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "deviceLabel": "Academy PC",
+  "vpnAddress": "10.88.0.2",
+  "anyDeskPort": 7070,
+  "tunnelName": "academy",
+  "tunnelConfigPath": "C:\\ProgramData\\RemoteBridge\\academy.conf.dpapi",
+  "wireGuardPath": "C:\\Program Files\\WireGuard\\wireguard.exe",
+  "anyDeskPath": "C:\\Program Files (x86)\\AnyDesk\\AnyDesk.exe"
+}

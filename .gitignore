@@ -18,6 +18,8 @@ id_ed25519*
 *.key
 *.p12
 *.pfx
+*.conf
+*.conf.dpapi
 
 # Logs, recordings, screenshots, and temporary files
 *.log
@@ -35,6 +37,8 @@ id_ed25519*
 
 # Portable launcher: private profiles, generated shortcuts, Python build artifacts
 *.local.json
+remote-bridge.local.json
+desktop/config.local.json
 .local/
 __pycache__/
 *.py[cod]

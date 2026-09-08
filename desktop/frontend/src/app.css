@@ -1,0 +1,48 @@
+.shell { width: min(1120px, 100%); min-height: 100vh; margin: 0 auto; padding: 30px 42px 24px; display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 44px; }
+.brand { display: flex; align-items: center; gap: 13px; }
+.brand h1 { margin: 0; font-size: 18px; letter-spacing: -.4px; }
+.brand p { margin: 3px 0 0; color: #8a93a5; font-size: 11px; text-transform: uppercase; letter-spacing: 1.25px; font-weight: 700; }
+.brand-mark { width: 38px; height: 38px; display: grid; place-content: center; border-radius: 12px; background: #1d43d8; box-shadow: 0 8px 22px #1d43d83d; transform: rotate(45deg); }
+.brand-mark span { display: block; width: 17px; height: 5px; margin: 2px; border: 2px solid white; border-radius: 6px; transform: rotate(-45deg); }
+.icon-button { width: 40px; height: 40px; border: 1px solid #dfe4ee; border-radius: 12px; background: #fff; color: #596274; font-size: 19px; cursor: pointer; transition: .2s ease; }
+.icon-button:hover { border-color: #b6c3e8; color: #1d43d8; transform: translateY(-1px); }
+.hero { display: flex; align-items: end; justify-content: space-between; margin-bottom: 28px; }
+.eyebrow { color: #3156de; font-size: 10px; letter-spacing: 1.7px; font-weight: 800; }
+.hero h2 { margin: 8px 0 5px; font-size: clamp(28px, 4vw, 42px); letter-spacing: -1.5px; }
+.hero p { margin: 0; color: #7b8495; font-size: 14px; }
+.overall { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border: 1px solid #dfe4ec; border-radius: 999px; background: #fff; color: #737d8e; font-size: 12px; font-weight: 700; }
+.pulse { width: 8px; height: 8px; border-radius: 50%; background: #aab1be; }
+.overall.online { color: #15755b; border-color: #ccebdd; background: #f4fcf8; }
+.overall.online .pulse { background: #20a778; box-shadow: 0 0 0 5px #20a77817; }
+.status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.status-card { position: relative; min-height: 170px; padding: 22px; background: #fff; border: 1px solid #e1e6ee; border-radius: 18px; box-shadow: 0 8px 28px rgba(31, 46, 84, .055); }
+.card-icon { width: 40px; height: 40px; display: grid; place-items: center; margin-bottom: 25px; border-radius: 12px; font-size: 11px; font-weight: 900; }
+.card-icon.vpn { color: #274bd4; background: #edf1ff; }
+.card-icon.target { color: #8e5b13; background: #fff4dc; }
+.card-icon.anydesk { color: #a53d57; background: #fff0f4; }
+.card-label { display: block; color: #a0a7b4; font-size: 9px; font-weight: 800; letter-spacing: 1.2px; }
+.status-card h3 { margin: 5px 0 3px; font-size: 17px; }
+.status-card p { margin: 0; color: #8b93a2; font-size: 12px; }
+.badge { position: absolute; top: 22px; right: 20px; padding: 5px 9px; border-radius: 999px; color: #6f7785; background: #f1f3f6; font-size: 10px; font-weight: 800; }
+.badge.good { color: #15755b; background: #e8f8f1; }.badge.warn { color: #9a671c; background: #fff3dc; }.badge.bad { color: #b04656; background: #ffedf0; }
+.action-panel { margin-top: 18px; padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #172033; color: #fff; border-radius: 18px; box-shadow: 0 15px 36px rgba(22, 32, 51, .16); }
+.message-wrap { min-width: 0; display: flex; align-items: center; gap: 13px; }
+.message-dot { width: 9px; height: 9px; flex: 0 0 auto; border: 2px solid #7894ff; border-radius: 50%; box-shadow: 0 0 0 5px #7894ff19; }
+.message-wrap strong { display: block; max-width: 380px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.message-wrap small { display: block; margin-top: 5px; color: #8f99ad; font-size: 10px; }
+.actions { display: flex; gap: 9px; flex: 0 0 auto; }
+.button { height: 39px; padding: 0 15px; border: 0; border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer; transition: .18s ease; }
+.button:hover:not(:disabled) { transform: translateY(-1px); }.button:disabled { opacity: .42; cursor: default; }
+.button.primary { min-width: 178px; display: inline-flex; justify-content: space-between; align-items: center; gap: 15px; color: #fff; background: #3156de; box-shadow: 0 8px 22px #3156de42; }
+.button.primary:hover:not(:disabled) { background: #2548c9; }.button.secondary { color: #27334a; background: #fff; }.button.ghost { color: #aeb7c8; background: #2a3549; }
+footer { margin-top: auto; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; color: #939baa; font-size: 10px; }
+.text-button { border: 0; background: transparent; color: #536078; font-size: 11px; font-weight: 700; cursor: pointer; }
+dialog { width: min(620px, calc(100vw - 40px)); padding: 0; border: 0; border-radius: 20px; color: #172033; box-shadow: 0 28px 80px rgba(15, 25, 48, .28); }
+dialog::backdrop { background: rgba(18, 27, 45, .52); backdrop-filter: blur(4px); }
+dialog form { padding: 28px; }.dialog-head { display: flex; justify-content: space-between; align-items: start; }.dialog-head h2 { margin: 7px 0 0; font-size: 26px; }.dialog-copy { margin: 16px 0 22px; color: #737d8e; font-size: 12px; line-height: 1.6; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }.form-grid label { display: grid; gap: 7px; color: #536078; font-size: 11px; font-weight: 750; }.form-grid label.wide { grid-column: 1 / -1; }.form-grid em { color: #9ba3b1; font-style: normal; font-weight: 500; }
+.form-grid input { width: 100%; height: 42px; padding: 0 12px; border: 1px solid #dfe4ed; border-radius: 10px; outline: none; color: #1e293b; background: #f9fafc; font-size: 12px; }.form-grid input:focus { border-color: #7690ed; box-shadow: 0 0 0 3px #3156de15; background: #fff; }
+.dialog-actions { display: flex; justify-content: end; gap: 9px; margin-top: 24px; }.dialog-actions .ghost { color: #58647a; background: #edf0f5; }
+.busy .button, .busy .text-button { pointer-events: none; }
+@media (max-width: 880px) { .shell { padding: 24px; }.status-grid { grid-template-columns: 1fr; }.status-card { min-height: 116px; display: flex; align-items: center; gap: 18px; }.card-icon { margin: 0; }.action-panel { align-items: stretch; flex-direction: column; }.actions { justify-content: flex-end; } }

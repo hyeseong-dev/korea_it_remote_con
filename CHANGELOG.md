@@ -1,5 +1,15 @@
 # 변경 기록
 
+## 3.0.0-alpha.1 — 2026-09-08
+
+- `feature/windows-gui-go` 브랜치에서 RemoteBridge Windows GUI 알파 버전 시작.
+- Go와 Wails 기반 상태 대시보드 및 로컬 연결 설정 화면 추가.
+- 공식 WireGuard for Windows 터널 서비스의 조회·설치·시작·종료 흐름 추가.
+- VPN 내부 IPv4의 AnyDesk TCP 7070 진단 후 AnyDesk 직접 연결 실행.
+- WireGuard 개인키와 AnyDesk 암호를 앱 설정에서 다루지 않는 보안 경계 적용.
+- Go 단위 테스트, 정적 검사, 프런트엔드 빌드 및 Windows 실행 파일 구동 확인.
+- 기존 Python v2 CLI와 Mac 실행기를 제거하지 않고 호환 자산으로 보존.
+
 ## 2.0.0 — 2026-09-05
 
 - 공통 Python CLI: list, connect, doctor, dry-run.

@@ -1,6 +1,6 @@
 # 원격 접속 구조 검토
 
-> 이후 결정: RDP는 유지하고 변경하지 않는다. 현재 구현 방향은 장치 프로필과 OS별 실행 어댑터를 분리하는 공통 AnyDesk CLI다. 아래 진단은 당시의 관측 기록이며, RDP 전환 대기 상태를 현재 작업으로 해석하지 않는다. 최신 사용법은 README.md를 따른다.
+> 이 문서는 v2 이전 원격 환경의 진단 기록입니다. `feature/windows-gui-go` 브랜치의 현재 제품 구조와 계획은 [`docs/REMOTE_BRIDGE_PLAN.md`](docs/REMOTE_BRIDGE_PLAN.md), 최신 구동 방법은 [`README.md`](README.md)를 따릅니다. 아래 기록을 v3의 현재 구현 상태로 해석하지 않습니다.
 
 ## 결정 상태
 
