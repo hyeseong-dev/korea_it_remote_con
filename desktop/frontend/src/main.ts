@@ -1,13 +1,15 @@
 import './style.css';
 import './app.css';
-import {ConnectAndLaunch, ConnectVPN, DisconnectVPN, GetStatus, SaveSettings} from '../wailsjs/go/main/App';
+import {ConnectAndLaunch, ConnectVPN, DeleteProfile, DisconnectVPN, GetStatus, SaveSettings, SelectProfile} from '../wailsjs/go/main/App';
 
 type Settings = {
+    profileId: string;
     deviceLabel: string;
     targetAddress: string;
     tailscalePath: string;
     anyDeskPath: string;
 };
+type DeviceProfile = { id: string; deviceLabel: string; targetAddress: string; };
 
 type Status = {
     configured: boolean;
@@ -17,6 +19,8 @@ type Status = {
     message: string;
     updatedAt: string;
     settings: Settings;
+    profiles: DeviceProfile[];
+    activeProfileId: string;
 };
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -28,7 +32,7 @@ app.innerHTML = `
         <div class="brand-mark" aria-hidden="true"><span></span><span></span></div>
         <div><h1>RemoteBridge</h1><p>Windows remote workspace</p></div>
       </div>
-      <button class="icon-button" id="settingsButton" aria-label="연결 설정 열기">⚙</button>
+      <div class="top-actions"><select id="profilePicker" aria-label="원격 PC 선택"></select><button class="icon-button" id="newDeviceButton" aria-label="원격 PC 추가">＋</button><button class="icon-button" id="settingsButton" aria-label="연결 설정 열기">⚙</button></div>
     </header>
 
     <section class="hero">
@@ -75,6 +79,7 @@ app.innerHTML = `
 
   <dialog id="settingsDialog">
     <form id="settingsForm">
+      <input name="profileId" type="hidden">
       <div class="dialog-head"><div><span class="eyebrow">CONNECTION PROFILE</span><h2>연결 설정</h2></div><button type="button" class="icon-button" id="closeSettings" aria-label="닫기">×</button></div>
       <p class="dialog-copy">두 PC를 같은 Tailnet에 로그인한 뒤 원격 장치의 Tailscale IP 또는 MagicDNS 이름을 입력하세요.</p>
       <div class="form-grid">
@@ -83,7 +88,7 @@ app.innerHTML = `
         <label class="wide"><span>Tailscale 실행 파일 <em>선택</em></span><input name="tailscalePath" placeholder="자동 검색"></label>
         <label class="wide"><span>AnyDesk 실행 파일 <em>선택</em></span><input name="anyDeskPath" placeholder="자동 검색"></label>
       </div>
-      <div class="dialog-actions"><button type="button" class="button ghost" id="cancelSettings">취소</button><button type="submit" class="button primary">설정 저장</button></div>
+      <div class="dialog-actions"><button type="button" class="button danger" id="deleteProfile">이 PC 삭제</button><span class="dialog-spacer"></span><button type="button" class="button ghost" id="cancelSettings">취소</button><button type="submit" class="button primary">설정 저장</button></div>
     </form>
   </dialog>
 `;
@@ -91,6 +96,7 @@ app.innerHTML = `
 const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const dialog = byId<HTMLDialogElement>('settingsDialog');
 const form = byId<HTMLFormElement>('settingsForm');
+const profilePicker = byId<HTMLSelectElement>('profilePicker');
 let current: Status | null = null;
 let busy = false;
 
@@ -113,6 +119,8 @@ function render(status: Status) {
     setBadge('targetBadge', status.targetState);
     setBadge('anyDeskBadge', status.anyDeskState);
     byId('deviceTitle').textContent = status.settings?.deviceLabel || '원격 Windows PC';
+    profilePicker.innerHTML = (status.profiles ?? []).map(profile => `<option value="${profile.id}">${profile.deviceLabel}</option>`).join('');
+    profilePicker.value = status.activeProfileId || '';
     byId('deviceAddress').textContent = status.settings?.targetAddress ? `${status.settings.targetAddress} · Tailscale private network` : 'Tailscale 원격 장치를 설정해 주세요.';
     byId('message').textContent = status.message || '상태 확인을 완료했습니다.';
     byId('updatedAt').textContent = status.updatedAt ? `마지막 확인 ${new Date(status.updatedAt).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit', second: '2-digit'})}` : '';
@@ -143,17 +151,29 @@ async function run(operation: () => Promise<Status>) {
 
 function openSettings() {
     const settings = current?.settings ?? {} as Settings;
-    for (const key of ['deviceLabel', 'targetAddress', 'tailscalePath', 'anyDeskPath'] as const) {
+    for (const key of ['profileId', 'deviceLabel', 'targetAddress', 'tailscalePath', 'anyDeskPath'] as const) {
         const input = form.elements.namedItem(key) as HTMLInputElement;
         input.value = settings[key] ?? '';
     }
+    byId<HTMLButtonElement>('deleteProfile').disabled = (current?.profiles?.length ?? 0) <= 1;
+    dialog.showModal();
+}
+
+function openNewProfile() {
+    (form.elements.namedItem('profileId') as HTMLInputElement).value = '';
+    (form.elements.namedItem('deviceLabel') as HTMLInputElement).value = '';
+    (form.elements.namedItem('targetAddress') as HTMLInputElement).value = '';
+    byId<HTMLButtonElement>('deleteProfile').disabled = true;
     dialog.showModal();
 }
 
 byId('settingsButton').addEventListener('click', openSettings);
+byId('newDeviceButton').addEventListener('click', openNewProfile);
 byId('closeSettings').addEventListener('click', () => dialog.close());
 byId('cancelSettings').addEventListener('click', () => dialog.close());
 byId('refreshButton').addEventListener('click', () => run(GetStatus));
+profilePicker.addEventListener('change', () => run(() => SelectProfile(profilePicker.value)));
+byId('deleteProfile').addEventListener('click', () => { const id = (form.elements.namedItem('profileId') as HTMLInputElement).value; if (id && confirm('이 원격 PC를 삭제할까요?')) run(() => DeleteProfile(id)).then(() => dialog.close()); });
 byId('vpnButton').addEventListener('click', () => run(ConnectVPN));
 byId('disconnectButton').addEventListener('click', () => run(DisconnectVPN));
 byId('connectButton').addEventListener('click', () => run(ConnectAndLaunch));
@@ -161,6 +181,7 @@ form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const field = (name: string) => (form.elements.namedItem(name) as HTMLInputElement).value;
     const values: Settings = {
+        profileId: field('profileId'),
         deviceLabel: field('deviceLabel'),
         targetAddress: field('targetAddress'),
         tailscalePath: field('tailscalePath'),

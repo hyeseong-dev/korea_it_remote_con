@@ -1,5 +1,11 @@
 # 변경 기록
 
+## 3.0.0-beta.1 — 2026-09-09
+
+- 여러 원격 Windows PC 프로필의 추가·전환·삭제 지원.
+- 원격 PC의 Tailscale 대역 AnyDesk TCP 7070 방화벽 설정 스크립트 추가.
+- 사용자 설치 안내, 출시 점검표, ZIP·SHA-256 릴리스 빌드 스크립트 추가.
+
 ## 3.0.0-alpha.2 — 2026-09-09
 
 - `feature/windows-gui-tailscale` 브랜치에서 Windows 11 간 실사용 구성을 단순화.

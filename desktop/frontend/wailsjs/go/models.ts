@@ -1,17 +1,35 @@
 export namespace bridge {
-
+	
+	export class DeviceProfile {
+	    id: string;
+	    deviceLabel: string;
+	    targetAddress: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DeviceProfile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.deviceLabel = source["deviceLabel"];
+	        this.targetAddress = source["targetAddress"];
+	    }
+	}
 	export class SettingsInput {
+	    profileId: string;
 	    deviceLabel: string;
 	    targetAddress: string;
 	    tailscalePath: string;
 	    anyDeskPath: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SettingsInput(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.profileId = source["profileId"];
 	        this.deviceLabel = source["deviceLabel"];
 	        this.targetAddress = source["targetAddress"];
 	        this.tailscalePath = source["tailscalePath"];
@@ -26,11 +44,13 @@ export namespace bridge {
 	    message: string;
 	    updatedAt: string;
 	    settings: SettingsInput;
-
+	    profiles: DeviceProfile[];
+	    activeProfileId: string;
+	
 	    static createFrom(source: any = {}) {
 	        return new Status(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.configured = source["configured"];
@@ -40,8 +60,10 @@ export namespace bridge {
 	        this.message = source["message"];
 	        this.updatedAt = source["updatedAt"];
 	        this.settings = this.convertValues(source["settings"], SettingsInput);
+	        this.profiles = this.convertValues(source["profiles"], DeviceProfile);
+	        this.activeProfileId = source["activeProfileId"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -62,3 +84,4 @@ export namespace bridge {
 	}
 
 }
+

@@ -28,6 +28,14 @@ func (a *App) SaveSettings(input bridge.SettingsInput) bridge.Status {
 	return a.manager.SaveSettings(a.ctx, input)
 }
 
+func (a *App) SelectProfile(profileID string) bridge.Status {
+	return a.manager.SelectProfile(a.ctx, profileID)
+}
+
+func (a *App) DeleteProfile(profileID string) bridge.Status {
+	return a.manager.DeleteProfile(a.ctx, profileID)
+}
+
 func (a *App) ConnectVPN() bridge.Status {
 	return a.manager.ConnectVPN(a.ctx)
 }

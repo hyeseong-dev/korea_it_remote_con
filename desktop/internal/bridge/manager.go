@@ -13,13 +13,15 @@ import (
 )
 
 type Status struct {
-	Configured   bool          `json:"configured"`
-	VPNState     string        `json:"vpnState"`
-	TargetState  string        `json:"targetState"`
-	AnyDeskState string        `json:"anyDeskState"`
-	Message      string        `json:"message"`
-	UpdatedAt    string        `json:"updatedAt"`
-	Settings     SettingsInput `json:"settings"`
+	Configured      bool            `json:"configured"`
+	VPNState        string          `json:"vpnState"`
+	TargetState     string          `json:"targetState"`
+	AnyDeskState    string          `json:"anyDeskState"`
+	Message         string          `json:"message"`
+	UpdatedAt       string          `json:"updatedAt"`
+	Settings        SettingsInput   `json:"settings"`
+	Profiles        []DeviceProfile `json:"profiles"`
+	ActiveProfileID string          `json:"activeProfileId"`
 }
 
 type Manager struct {
@@ -47,6 +49,13 @@ func (m *Manager) Status(ctx context.Context) Status {
 	}
 	status.Configured = true
 	status.Settings = config.settings()
+	status.Profiles = config.Profiles
+	status.ActiveProfileID = config.ActiveProfileID
+	profile, profileErr := config.activeProfile()
+	if profileErr != nil {
+		status.Message = safeError(profileErr)
+		return status
+	}
 
 	tailscale, err := findTailscale(config.TailscalePath)
 	if err != nil {
@@ -61,7 +70,7 @@ func (m *Manager) Status(ctx context.Context) Status {
 			status.VPNState = state
 			switch state {
 			case "running":
-				if probe(ctx, config.TargetAddress, config.AnyDeskPort) {
+				if probe(ctx, profile.TargetAddress, config.AnyDeskPort) {
 					status.TargetState = "reachable"
 					status.Message = "원격 Windows PC에 연결할 준비가 됐습니다."
 				} else {
@@ -90,11 +99,87 @@ func (m *Manager) Status(ctx context.Context) Status {
 }
 
 func (m *Manager) SaveSettings(ctx context.Context, input SettingsInput) Status {
-	config := configFromInput(input)
+	config, err := loadConfig(m.configPath)
+	if err != nil && !isNotConfigured(err) {
+		return m.failure(err)
+	}
+	if isNotConfigured(err) {
+		id, idErr := newProfileID()
+		if idErr != nil {
+			return m.failure(idErr)
+		}
+		config = Config{Version: configVersion, ActiveProfileID: id, Profiles: []DeviceProfile{{ID: id}}, AnyDeskPort: 7070}
+	}
+	profileID := input.ProfileID
+	if profileID == "" {
+		id, idErr := newProfileID()
+		if idErr != nil {
+			return m.failure(idErr)
+		}
+		profileID = id
+		config.Profiles = append(config.Profiles, DeviceProfile{ID: profileID})
+	}
+	found := false
+	for index := range config.Profiles {
+		if config.Profiles[index].ID == profileID {
+			config.Profiles[index].DeviceLabel = strings.TrimSpace(input.DeviceLabel)
+			config.Profiles[index].TargetAddress = strings.TrimSpace(input.TargetAddress)
+			found = true
+			break
+		}
+	}
+	if !found {
+		return m.failure(configError{"선택된 원격 PC를 찾을 수 없습니다."})
+	}
+	config.ActiveProfileID = profileID
+	config.TailscalePath = strings.TrimSpace(input.TailscalePath)
+	config.AnyDeskPath = strings.TrimSpace(input.AnyDeskPath)
 	if err := saveConfig(m.configPath, config); err != nil {
 		status := m.baseStatus()
 		status.Message = safeError(err)
 		return status
+	}
+	return m.Status(ctx)
+}
+
+func (m *Manager) SelectProfile(ctx context.Context, profileID string) Status {
+	config, err := loadConfig(m.configPath)
+	if err != nil {
+		return m.failure(err)
+	}
+	config.ActiveProfileID = profileID
+	if err := saveConfig(m.configPath, config); err != nil {
+		return m.failure(err)
+	}
+	return m.Status(ctx)
+}
+
+func (m *Manager) DeleteProfile(ctx context.Context, profileID string) Status {
+	config, err := loadConfig(m.configPath)
+	if err != nil {
+		return m.failure(err)
+	}
+	if len(config.Profiles) == 1 {
+		return m.failure(configError{"마지막 원격 PC는 삭제할 수 없습니다."})
+	}
+	profiles := make([]DeviceProfile, 0, len(config.Profiles)-1)
+	found := false
+	for _, profile := range config.Profiles {
+		if profile.ID == profileID {
+			found = true
+			continue
+		}
+		profiles = append(profiles, profile)
+	}
+	if !found {
+		return m.failure(configError{"선택된 원격 PC를 찾을 수 없습니다."})
+	}
+	config.Profiles = profiles
+	if config.ActiveProfileID == profileID {
+		config.ActiveProfileID = profiles[0].ID
+	}
+	if err := saveConfig(m.configPath, config); err != nil {
+		return m.failure(err)
 	}
 	return m.Status(ctx)
 }
@@ -164,7 +249,11 @@ func (m *Manager) ConnectAndLaunch(ctx context.Context) Status {
 	if err != nil {
 		return m.failure(err)
 	}
-	if err := launchAnyDesk(anydesk, config.TargetAddress); err != nil {
+	profile, err := config.activeProfile()
+	if err != nil {
+		return m.failure(err)
+	}
+	if err := launchAnyDesk(anydesk, profile.TargetAddress); err != nil {
 		return m.failure(errors.New("AnyDesk 실행 요청에 실패했습니다."))
 	}
 	status = m.Status(ctx)
@@ -178,6 +267,8 @@ func (m *Manager) failure(err error) Status {
 	if config, loadErr := loadConfig(m.configPath); loadErr == nil {
 		status.Configured = true
 		status.Settings = config.settings()
+		status.Profiles = config.Profiles
+		status.ActiveProfileID = config.ActiveProfileID
 	}
 	return status
 }

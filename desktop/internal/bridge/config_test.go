@@ -3,6 +3,7 @@ package bridge
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -13,6 +14,10 @@ func validInput() SettingsInput {
 		TailscalePath: `C:\Program Files\Tailscale\tailscale.exe`,
 		AnyDeskPath:   `C:\Program Files (x86)\AnyDesk\AnyDesk.exe`,
 	}
+}
+
+func validConfig() Config {
+	return Config{Version: configVersion, ActiveProfileID: "0123456789abcdef01234567", Profiles: []DeviceProfile{{ID: "0123456789abcdef01234567", DeviceLabel: "Academy PC", TargetAddress: "academy-pc.example.ts.net"}}, AnyDeskPort: 7070, TailscalePath: `C:\Program Files\Tailscale\tailscale.exe`, AnyDeskPath: `C:\Program Files (x86)\AnyDesk\AnyDesk.exe`}
 }
 
 func TestConfigValidation(t *testing.T) {
@@ -30,7 +35,12 @@ func TestConfigValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			input := validInput()
 			test.mutate(&input)
-			if err := validateConfig(configFromInput(input)); err == nil {
+			config := validConfig()
+			config.Profiles[0].DeviceLabel = input.DeviceLabel
+			config.Profiles[0].TargetAddress = input.TargetAddress
+			config.TailscalePath = input.TailscalePath
+			config.AnyDeskPath = input.AnyDeskPath
+			if err := validateConfig(config); err == nil {
 				t.Fatal("expected validation error")
 			}
 		})
@@ -42,7 +52,9 @@ func TestTargetAddressAcceptsIPv4AndMagicDNS(t *testing.T) {
 		t.Run(address, func(t *testing.T) {
 			input := validInput()
 			input.TargetAddress = address
-			if err := validateConfig(configFromInput(input)); err != nil {
+			config := validConfig()
+			config.Profiles[0].TargetAddress = input.TargetAddress
+			if err := validateConfig(config); err != nil {
 				t.Fatalf("unexpected validation error: %v", err)
 			}
 		})
@@ -51,7 +63,7 @@ func TestTargetAddressAcceptsIPv4AndMagicDNS(t *testing.T) {
 
 func TestSaveAndLoadConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
-	want := configFromInput(validInput())
+	want := validConfig()
 	if err := saveConfig(path, want); err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +71,7 @@ func TestSaveAndLoadConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %#v, want %#v", got, want)
 	}
 }
@@ -83,14 +95,14 @@ func TestLegacyWireGuardConfigMigratesInMemory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Version != 2 || got.TargetAddress != "100.64.1.2" || got.TailscalePath != "" {
+	if got.Version != configVersion || got.Profiles[0].TargetAddress != "100.64.1.2" || got.TailscalePath != "" {
 		t.Fatalf("unexpected migrated config: %#v", got)
 	}
 }
 
 func TestUnknownFieldsRejected(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
-	if err := os.WriteFile(path, []byte(`{"version":2,"secret":"leak"}`), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(`{"version":3,"secret":"leak"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := loadConfig(path); err == nil {

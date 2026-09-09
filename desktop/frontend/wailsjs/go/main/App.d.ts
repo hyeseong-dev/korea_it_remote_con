@@ -6,8 +6,12 @@ export function ConnectAndLaunch():Promise<bridge.Status>;
 
 export function ConnectVPN():Promise<bridge.Status>;
 
+export function DeleteProfile(arg1:string):Promise<bridge.Status>;
+
 export function DisconnectVPN():Promise<bridge.Status>;
 
 export function GetStatus():Promise<bridge.Status>;
 
 export function SaveSettings(arg1:bridge.SettingsInput):Promise<bridge.Status>;
+
+export function SelectProfile(arg1:string):Promise<bridge.Status>;

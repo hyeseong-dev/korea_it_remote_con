@@ -1,4 +1,4 @@
-# RemoteBridge v3.0.0-alpha.2
+# RemoteBridge v3.0.0-beta.1
 
 RemoteBridge는 **Tailscale로 연결된 Windows 11 PC의 상태를 확인하고 AnyDesk 원격 화면을 여는 데스크톱 GUI**다.
 
@@ -6,7 +6,7 @@ RemoteBridge는 **Tailscale로 연결된 Windows 11 PC의 상태를 확인하고
 
 > 현재 브랜치: `feature/windows-gui-tailscale`
 >
-> 현재 상태: Windows 11 간 기능 검증용 알파 버전
+> 현재 상태: Windows 11 간 배포 검증용 베타 버전
 
 ## 목적
 
@@ -109,12 +109,12 @@ desktop/build/bin/RemoteBridge.exe
 | `v1.0.0` | `main` | Mac 전용 실행기 기준 버전 |
 | `v2.0.0` | `feature/portable-access-v2` | Tailscale + AnyDesk 기반 Python CLI |
 | `v3.0.0-alpha.1` | `feature/windows-gui-go` | 자체 WireGuard 허브를 가정한 Windows GUI 실험 |
-| `v3.0.0-alpha.2` | `feature/windows-gui-tailscale` | Tailscale + AnyDesk 기반 Windows GUI |
+| `v3.0.0-beta.1` | `feature/windows-gui-tailscale` | Tailscale + AnyDesk 기반 Windows GUI |
 
 ## 현재 제한
 
 - Windows 11 amd64만 실제 배포 대상으로 한다.
-- 원격 프로필 하나만 저장한다.
+- 원격 PC 프로필을 최대 50개까지 저장한다.
 - Tailscale과 AnyDesk의 설치 및 최초 로그인은 자동화하지 않는다.
 - 원격 PC가 꺼져 있거나 AnyDesk 7070이 차단되면 실행하지 않는다.
 - 현재 Windows 11 두 대의 실제 인터넷 연결 검증은 남아 있다.

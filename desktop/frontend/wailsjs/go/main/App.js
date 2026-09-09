@@ -10,6 +10,10 @@ export function ConnectVPN() {
   return window['go']['main']['App']['ConnectVPN']();
 }
 
+export function DeleteProfile(arg1) {
+  return window['go']['main']['App']['DeleteProfile'](arg1);
+}
+
 export function DisconnectVPN() {
   return window['go']['main']['App']['DisconnectVPN']();
 }
@@ -20,4 +24,8 @@ export function GetStatus() {
 
 export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
+}
+
+export function SelectProfile(arg1) {
+  return window['go']['main']['App']['SelectProfile'](arg1);
 }
