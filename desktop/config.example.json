@@ -1,10 +1,8 @@
 {
-  "version": 1,
+  "version": 2,
   "deviceLabel": "Academy PC",
-  "vpnAddress": "10.88.0.2",
+  "targetAddress": "academy-pc.example.ts.net",
   "anyDeskPort": 7070,
-  "tunnelName": "academy",
-  "tunnelConfigPath": "C:\\ProgramData\\RemoteBridge\\academy.conf.dpapi",
-  "wireGuardPath": "C:\\Program Files\\WireGuard\\wireguard.exe",
+  "tailscalePath": "C:\\Program Files\\Tailscale\\tailscale.exe",
   "anyDeskPath": "C:\\Program Files (x86)\\AnyDesk\\AnyDesk.exe"
 }

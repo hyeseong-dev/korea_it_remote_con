@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -47,24 +48,33 @@ func (m *Manager) Status(ctx context.Context) Status {
 	status.Configured = true
 	status.Settings = config.settings()
 
-	installed, running, err := tunnelState(config.TunnelName)
+	tailscale, err := findTailscale(config.TailscalePath)
 	if err != nil {
-		status.VPNState = "error"
-		status.Message = "WireGuard 터널 상태를 확인하지 못했습니다."
-	} else if !installed {
-		status.VPNState = "not-installed"
-		status.Message = "WireGuard 터널이 아직 설치되지 않았습니다."
-	} else if !running {
-		status.VPNState = "stopped"
-		status.Message = "VPN 연결이 꺼져 있습니다."
+		status.VPNState = "missing"
+		status.Message = "Tailscale을 설치하거나 실행 파일 경로를 설정하세요."
 	} else {
-		status.VPNState = "running"
-		if probe(ctx, config.VPNAddress, config.AnyDeskPort) {
-			status.TargetState = "reachable"
-			status.Message = "원격 Windows PC에 연결할 준비가 됐습니다."
+		state, stateErr := tailscaleState(ctx, tailscale)
+		if stateErr != nil {
+			status.VPNState = "error"
+			status.Message = "Tailscale 상태를 확인하지 못했습니다."
 		} else {
-			status.TargetState = "unreachable"
-			status.Message = "VPN은 연결됐지만 원격 AnyDesk 포트에 응답이 없습니다."
+			status.VPNState = state
+			switch state {
+			case "running":
+				if probe(ctx, config.TargetAddress, config.AnyDeskPort) {
+					status.TargetState = "reachable"
+					status.Message = "원격 Windows PC에 연결할 준비가 됐습니다."
+				} else {
+					status.TargetState = "unreachable"
+					status.Message = "Tailscale은 연결됐지만 원격 AnyDesk 포트에 응답이 없습니다."
+				}
+			case "needs-login":
+				status.Message = "Tailscale 앱에서 로그인한 후 다시 시도하세요."
+			case "stopped":
+				status.Message = "Tailscale 연결이 꺼져 있습니다."
+			case "starting":
+				status.Message = "Tailscale 연결을 준비하고 있습니다."
+			}
 		}
 	}
 
@@ -94,38 +104,36 @@ func (m *Manager) ConnectVPN(ctx context.Context) Status {
 	if err != nil {
 		return m.failure(err)
 	}
-	installed, running, err := tunnelState(config.TunnelName)
+	tailscale, err := findTailscale(config.TailscalePath)
 	if err != nil {
-		return m.failure(errors.New("WireGuard 터널 상태를 확인하지 못했습니다."))
+		return m.failure(err)
 	}
-	if !installed {
-		if config.TunnelConfigPath == "" {
-			return m.failure(errors.New("처음 연결하려면 WireGuard 설정 파일 경로가 필요합니다."))
-		}
-		if _, err := os.Stat(config.TunnelConfigPath); err != nil {
-			return m.failure(errors.New("WireGuard 설정 파일을 찾을 수 없습니다."))
-		}
-		wireguard, err := findWireGuard(config.WireGuardPath)
-		if err != nil {
-			return m.failure(err)
-		}
-		if err := installTunnel(ctx, wireguard, config.TunnelConfigPath); err != nil {
-			return m.failure(errors.New("터널 설치에 실패했습니다. 관리자 권한으로 실행했는지 확인하세요."))
-		}
-	} else if !running {
-		if err := startTunnel(config.TunnelName); err != nil {
-			return m.failure(errors.New("VPN 시작에 실패했습니다. 관리자 권한이 필요할 수 있습니다."))
+	state, err := tailscaleState(ctx, tailscale)
+	if err != nil {
+		return m.failure(errors.New("Tailscale 상태를 확인하지 못했습니다."))
+	}
+	if state == "needs-login" {
+		status := m.Status(ctx)
+		status.Message = "Tailscale 앱에서 로그인한 후 다시 시도하세요."
+		return status
+	}
+	if state != "running" {
+		connectCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		if err := connectTailscale(connectCtx, tailscale); err != nil {
+			return m.failure(errors.New("Tailscale 연결에 실패했습니다. Tailscale 앱의 로그인 상태를 확인하세요."))
 		}
 	}
-	deadline := time.Now().Add(8 * time.Second)
+
+	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
-		_, running, _ = tunnelState(config.TunnelName)
-		if running {
+		state, _ = tailscaleState(ctx, tailscale)
+		if state == "running" {
 			return m.Status(ctx)
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
-	return m.failure(errors.New("VPN 시작 시간이 초과되었습니다."))
+	return m.failure(errors.New("Tailscale 연결 시간이 초과되었습니다."))
 }
 
 func (m *Manager) DisconnectVPN(ctx context.Context) Status {
@@ -133,14 +141,12 @@ func (m *Manager) DisconnectVPN(ctx context.Context) Status {
 	if err != nil {
 		return m.failure(err)
 	}
-	installed, running, err := tunnelState(config.TunnelName)
+	tailscale, err := findTailscale(config.TailscalePath)
 	if err != nil {
-		return m.failure(errors.New("WireGuard 터널 상태를 확인하지 못했습니다."))
+		return m.failure(err)
 	}
-	if installed && running {
-		if err := stopTunnel(config.TunnelName); err != nil {
-			return m.failure(errors.New("VPN 종료에 실패했습니다. 관리자 권한이 필요할 수 있습니다."))
-		}
+	if err := disconnectTailscale(ctx, tailscale); err != nil {
+		return m.failure(errors.New("Tailscale 연결 종료에 실패했습니다."))
 	}
 	return m.Status(ctx)
 }
@@ -158,7 +164,7 @@ func (m *Manager) ConnectAndLaunch(ctx context.Context) Status {
 	if err != nil {
 		return m.failure(err)
 	}
-	if err := launchAnyDesk(anydesk, config.VPNAddress); err != nil {
+	if err := launchAnyDesk(anydesk, config.TargetAddress); err != nil {
 		return m.failure(errors.New("AnyDesk 실행 요청에 실패했습니다."))
 	}
 	status = m.Status(ctx)
@@ -194,11 +200,11 @@ func probe(ctx context.Context, host string, port int) bool {
 	return true
 }
 
-func findWireGuard(override string) (string, error) {
+func findTailscale(override string) (string, error) {
 	return findExecutable(override, []string{
-		filepath.Join(os.Getenv("ProgramFiles"), "WireGuard", "wireguard.exe"),
-		filepath.Join(os.Getenv("ProgramFiles(x86)"), "WireGuard", "wireguard.exe"),
-	}, "WireGuard")
+		filepath.Join(os.Getenv("ProgramFiles"), "Tailscale", "tailscale.exe"),
+		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Tailscale", "tailscale.exe"),
+	}, "Tailscale")
 }
 
 func findAnyDesk(override string) (string, error) {
@@ -223,4 +229,27 @@ func findExecutable(override string, candidates []string, label string) (string,
 		}
 	}
 	return "", fmt.Errorf("%s를 설치하거나 실행 파일 경로를 설정하세요.", label)
+}
+
+type tailscaleStatus struct {
+	BackendState string `json:"BackendState"`
+}
+
+func parseTailscaleState(data []byte) (string, error) {
+	var status tailscaleStatus
+	if err := json.Unmarshal(data, &status); err != nil {
+		return "", err
+	}
+	switch strings.ToLower(status.BackendState) {
+	case "running":
+		return "running", nil
+	case "stopped":
+		return "stopped", nil
+	case "needslogin", "nostate":
+		return "needs-login", nil
+	case "starting":
+		return "starting", nil
+	default:
+		return "", fmt.Errorf("unknown Tailscale state: %q", status.BackendState)
+	}
 }

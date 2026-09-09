@@ -1,4 +1,6 @@
-# RemoteBridge v3.0.0-alpha.1 아키텍처
+# RemoteBridge v3.0.0-alpha.1 WireGuard 실험 아키텍처
+
+> 이 문서는 `feature/windows-gui-go` 브랜치에서 진행한 이전 WireGuard 허브 실험을 보존한다. 현재 `feature/windows-gui-tailscale` 브랜치의 `v3.0.0-alpha.2`는 자체 허브 대신 Tailscale을 사용한다. 현재 설계는 [상위 기획서](../REMOTE_BRIDGE_PLAN.md)를 참고한다.
 
 ![RemoteBridge v3.0.0-alpha.1 현재 구현 아키텍처](./remote-bridge-v3-alpha1.png)
 
@@ -24,4 +26,3 @@ RemoteBridge는 제어 Windows 11 PC에서 실행되는 연결 준비 GUI다. VP
 - AnyDesk 무인 접속 인증
 
 따라서 현재 구현은 전체 VPN 관리 시스템이 아니라, 준비된 WireGuard 네트워크 위에서 연결 상태를 진단하고 AnyDesk를 안전한 순서로 실행하는 Windows GUI다.
-

@@ -1,5 +1,13 @@
 # 변경 기록
 
+## 3.0.0-alpha.2 — 2026-09-09
+
+- `feature/windows-gui-tailscale` 브랜치에서 Windows 11 간 실사용 구성을 단순화.
+- 자체 WireGuard 허브와 `.conf` 의존을 제거하고 Tailscale 관리형 네트워크로 복귀.
+- Tailscale 상태 조회·연결·종료와 MagicDNS 또는 Tailscale IPv4 대상 연결 지원.
+- 기존 WireGuard 알파 설정의 장치 이름, 원격 주소와 AnyDesk 경로를 읽는 호환 처리 추가.
+- Tailscale 인증 정보와 AnyDesk 암호를 RemoteBridge 설정에 저장하지 않는 경계 유지.
+
 ## 3.0.0-alpha.1 — 2026-09-08
 
 - `feature/windows-gui-go` 브랜치에서 RemoteBridge Windows GUI 알파 버전 시작.

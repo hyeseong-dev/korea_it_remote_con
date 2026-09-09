@@ -1,28 +1,61 @@
-# RemoteBridge desktop MVP
+# RemoteBridge Windows GUI
 
-Windows 11에서 공식 WireGuard 터널을 시작한 뒤 VPN 내부 주소의 AnyDesk TCP 7070 연결을 확인하고 AnyDesk를 실행하는 Wails 기반 GUI입니다.
+`feature/windows-gui-tailscale` 브랜치의 `v3.0.0-alpha.2` 구현이다. Windows 11 제어 PC에서 Tailscale 연결 상태를 확인하고, 원격 Windows 11의 AnyDesk TCP 7070이 응답할 때 AnyDesk를 실행한다.
 
-이 디렉터리는 저장소의 `feature/windows-gui-go` 브랜치에서 개발하는 `v3.0.0-alpha.1` 구현입니다. 루트의 Python 파일은 `feature/portable-access-v2`에서 시작된 기존 v2 구현이며, 마이그레이션 비교와 호환을 위해 남겨 둡니다.
+## 준비 사항
 
-## 보안 경계
+두 Windows 11 PC에 다음 프로그램을 설치한다.
 
-- VPN 프로토콜이나 암호화를 직접 구현하지 않습니다.
-- WireGuard 개인키와 AnyDesk 암호를 앱 설정에 저장하지 않습니다.
-- WireGuard 설정 파일은 로컬에만 두고 Git에 커밋하지 않습니다.
-- 외부 명령은 셸 없이 고정된 인자 배열로 실행합니다.
-- AnyDesk 실행 전 TCP 7070 응답을 확인합니다.
+- [Tailscale for Windows](https://tailscale.com/download/windows)
+- 설치형 AnyDesk
 
-## 사전 조건
+두 PC를 같은 Tailnet에 로그인한다. 원격 PC에서는 AnyDesk의 직접 연결과 무인 접속을 활성화하고, Windows 방화벽에서 TCP 7070을 Tailscale 네트워크에 허용한다.
 
-- Windows 11
-- 공식 WireGuard for Windows
-- 설치형 AnyDesk와 직접 연결 허용
-- 미리 준비한 WireGuard `.conf` 또는 `.conf.dpapi` 파일
-- 터널 설치와 시작/종료를 위한 관리자 권한
+## 사용자 실행 순서
 
-## 개발
+1. 제어 PC와 원격 PC의 Tailscale 상태가 연결됨인지 확인한다.
+2. 제어 PC에서 `desktop/build/bin/RemoteBridge.exe`를 실행한다.
+3. 장치 이름과 원격 PC의 Tailscale IPv4 또는 MagicDNS 이름을 입력한다.
+4. 실행 파일 경로는 표준 위치에 설치했다면 비워 둔다.
+5. **연결하고 AnyDesk 열기**를 누른다.
+6. AnyDesk에서 무인 접속 인증을 완료한다.
 
-프로젝트 루트의 `.local` 도구는 Git에서 제외됩니다. 시스템에 Go와 Wails가 설치돼 있다면 일반 명령을 사용해도 됩니다.
+MagicDNS가 활성화된 Tailnet에서는 IP 대신 `academy-pc` 또는 전체 이름인 `academy-pc.example.ts.net`을 사용할 수 있다. 주소는 Tailscale 관리 콘솔의 Machines 화면이나 `tailscale status`에서 확인한다.
+
+## 앱 동작 순서
+
+1. `tailscale status --json`으로 로컬 연결 상태를 확인한다.
+2. 꺼져 있으면 `tailscale up --timeout=10s`로 연결한다.
+3. 원격 주소의 TCP 7070을 최대 3초 동안 확인한다.
+4. 응답하는 경우에만 `AnyDesk.exe <원격 주소>`를 실행한다.
+5. **VPN 종료**을 누르면 `tailscale down`을 실행한다.
+
+로그인이 필요하면 RemoteBridge가 인증을 대신하지 않는다. Tailscale 앱에서 로그인한 뒤 다시 시도한다. Tailscale 로그인 정보와 AnyDesk 암호는 RemoteBridge에 저장하지 않는다.
+
+## 설정 파일
+
+설정은 `%AppData%\RemoteBridge\config.json`에 저장된다.
+
+```json
+{
+  "version": 2,
+  "deviceLabel": "Academy PC",
+  "targetAddress": "academy-pc.example.ts.net",
+  "anyDeskPort": 7070,
+  "tailscalePath": "C:\\Program Files\\Tailscale\\tailscale.exe",
+  "anyDeskPath": "C:\\Program Files (x86)\\AnyDesk\\AnyDesk.exe"
+}
+```
+
+`v3.0.0-alpha.1`의 WireGuard 설정이 남아 있으면 장치 이름, 원격 주소와 AnyDesk 경로를 메모리에서 변환해 읽는다. 다음 저장부터 새 형식으로 기록된다.
+
+## 개발과 빌드
+
+요구 사항:
+
+- Go 1.25 이상
+- Node.js와 npm
+- Wails CLI v2.15.0
 
 ```powershell
 cd desktop
@@ -32,27 +65,12 @@ wails dev
 wails build -clean -platform windows/amd64 -webview2 embed
 ```
 
-빌드 결과는 `desktop/build/bin/RemoteBridge.exe`에 생성됩니다. 첫 실행 시 설정 창에서 장치 이름, VPN 내부 IPv4, WireGuard 터널 이름과 설정 파일 경로를 입력합니다. 실행 파일 경로를 비워 두면 표준 설치 위치에서 자동으로 찾습니다.
+빌드 결과는 `desktop/build/bin/RemoteBridge.exe`에 생성된다.
 
-## 사용자 구동 순서
+## 현재 제한
 
-1. 공식 WireGuard for Windows와 설치형 AnyDesk를 설치합니다.
-2. 저장소 밖에 WireGuard `.conf` 또는 `.conf.dpapi` 파일을 준비합니다.
-3. `RemoteBridge.exe`를 실행합니다.
-4. 장치 이름, 원격 VPN IPv4, 터널 이름과 설정 파일 절대 경로를 저장합니다.
-5. **연결하고 AnyDesk 열기**를 누릅니다.
-6. AnyDesk가 열리면 앱 자체의 무인 접속 인증을 완료합니다.
-
-최초 터널 설치와 서비스 시작·종료는 Windows 관리자 권한이 필요할 수 있습니다. RemoteBridge는 권한 상승을 우회하지 않습니다.
-
-실제 설정은 `%AppData%\RemoteBridge\config.json`에 저장됩니다. 이 파일에는 개인키가 아니라 로컬 WireGuard 설정 파일의 경로만 들어갑니다. 테스트나 별도 프로필이 필요하면 `REMOTE_BRIDGE_CONFIG` 환경 변수로 설정 파일 경로를 바꿀 수 있습니다.
-
-## 현재 범위
-
-- Windows WireGuard 터널 서비스 상태 확인
-- 터널 서비스 시작 및 종료
-- 최초 연결 시 공식 WireGuard 실행 파일을 통한 터널 서비스 설치
-- VPN 내부 IPv4의 AnyDesk TCP 7070 진단
-- 진단 성공 후 AnyDesk 직접 연결 실행
-
-키 발급, VPS 허브 프로비저닝, NAT 통과, 릴레이, 자동 업데이트는 후속 단계입니다.
+- Windows 11 amd64만 실제 배포 대상으로 한다.
+- 한 번에 원격 장치 프로필 하나만 저장한다.
+- AnyDesk 기본 직접 연결 포트 7070만 지원한다.
+- Tailscale 설치와 최초 로그인, AnyDesk 무인 접속 설정은 사용자가 수행한다.
+- TCP 응답과 앱 실행은 확인하지만 AnyDesk 인증 및 화면 연결 완료까지 판정하지 않는다.

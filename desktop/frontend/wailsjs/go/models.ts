@@ -2,10 +2,8 @@ export namespace bridge {
 
 	export class SettingsInput {
 	    deviceLabel: string;
-	    vpnAddress: string;
-	    tunnelName: string;
-	    tunnelConfigPath: string;
-	    wireGuardPath: string;
+	    targetAddress: string;
+	    tailscalePath: string;
 	    anyDeskPath: string;
 
 	    static createFrom(source: any = {}) {
@@ -15,10 +13,8 @@ export namespace bridge {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.deviceLabel = source["deviceLabel"];
-	        this.vpnAddress = source["vpnAddress"];
-	        this.tunnelName = source["tunnelName"];
-	        this.tunnelConfigPath = source["tunnelConfigPath"];
-	        this.wireGuardPath = source["wireGuardPath"];
+	        this.targetAddress = source["targetAddress"];
+	        this.tailscalePath = source["tailscalePath"];
 	        this.anyDeskPath = source["anyDeskPath"];
 	    }
 	}
@@ -66,5 +62,3 @@ export namespace bridge {
 	}
 
 }
-
-\n

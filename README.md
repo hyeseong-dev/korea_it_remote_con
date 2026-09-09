@@ -1,169 +1,120 @@
-# RemoteBridge v3.0.0-alpha.1
+# RemoteBridge v3.0.0-alpha.2
 
-RemoteBridge는 **공식 WireGuard VPN 터널을 준비하고, VPN 내부 주소의 Windows 11 PC에 AnyDesk 직접 연결을 여는 데스크톱 GUI**입니다.
+RemoteBridge는 **Tailscale로 연결된 Windows 11 PC의 상태를 확인하고 AnyDesk 원격 화면을 여는 데스크톱 GUI**다.
 
-이 브랜치의 목표는 Tailscale에 의존하던 기존 실행 흐름을 자체 운영 가능한 WireGuard 네트워크로 옮기는 것입니다. VPN 암호화 프로토콜 자체를 새로 만들지는 않습니다. 검증된 WireGuard를 데이터 전송 계층으로 사용하고, 이 프로젝트는 설정·상태 진단·AnyDesk 실행 경험을 제공합니다.
+이 버전은 자체 VPN 허브를 운영하지 않는다. Tailscale이 장치 등록, 암호화된 네트워크 경로, NAT 통과와 필요 시 릴레이를 담당하고, RemoteBridge는 비기술 사용자가 연결 상태를 확인하고 AnyDesk를 실행하는 한 화면을 제공한다.
 
-> 현재 상태: Windows 11용 기능 검증 단계입니다. 실제 WireGuard 허브 구성, 키 발급 및 배포는 아직 자동화하지 않습니다.
-
-## 프로그램 기획
-
-기존 v2는 Tailscale과 AnyDesk가 이미 설치되고 연결된 환경에서 Python 명령을 실행해야 했습니다. v3는 비기술 사용자도 한 화면에서 다음 상태를 확인하고 접속할 수 있도록 설계합니다.
-
-1. 공식 WireGuard 터널이 설치되어 있는지 확인합니다.
-2. 중지된 터널을 시작하거나, 로컬 설정 파일로 최초 터널 서비스를 설치합니다.
-3. VPN 내부 IPv4에서 AnyDesk 기본 포트 `7070`이 응답하는지 확인합니다.
-4. 응답이 확인된 경우에만 AnyDesk를 해당 VPN 주소로 실행합니다.
-5. VPN, 원격 Windows PC, AnyDesk 준비 상태를 GUI에 구분해 표시합니다.
-
-상세한 문제 정의, 범위와 단계별 개발 계획은 [RemoteBridge 제품 기획서](docs/REMOTE_BRIDGE_PLAN.md)를 참고하세요.
+> 현재 브랜치: `feature/windows-gui-tailscale`
+>
+> 현재 상태: Windows 11 간 기능 검증용 알파 버전
 
 ## 목적
 
-- Tailscale 계정과 제어 서버에 대한 필수 의존성을 줄입니다.
-- 원격 접속 전에 VPN과 대상 포트를 진단하여 실패 원인을 구분합니다.
-- WireGuard와 AnyDesk의 복잡한 실행 절차를 하나의 Windows GUI로 묶습니다.
-- 기존 AnyDesk 인증과 화면 전송 기능을 재사용합니다.
-- 개인키, AnyDesk 암호와 실제 장치 정보가 Git에 들어가지 않도록 분리합니다.
+- VPS, WireGuard 키와 `.conf`, 공유기 포트 전달 없이 인터넷의 두 Windows PC를 연결한다.
+- VPN 상태, 원격 PC 도달 여부와 AnyDesk 준비 상태를 분리해 표시한다.
+- 원격 장치 주소를 확인한 뒤 한 번의 동작으로 AnyDesk를 실행한다.
+- Tailscale 인증 정보와 AnyDesk 암호는 각각의 공식 앱에 맡긴다.
 
-## 동작 구조
+## 아키텍처
 
 ```text
-RemoteBridge GUI (Windows 11)
-        │
-        ├─ 공식 WireGuard 터널 서비스 시작/조회
-        │
-        ▼
-WireGuard 사설망 ─────────────── 원격 Windows 11
-                                  │
-                                  └─ AnyDesk TCP 7070
-        │
-        └─ 포트 응답 확인 후 AnyDesk.exe <VPN-IP> 실행
+제어 Windows 11                              원격 Windows 11
+┌─────────────────────────┐                ┌────────────────────┐
+│ RemoteBridge             │                │ Tailscale          │
+│  ├─ Tailscale 상태 확인  │                │ AnyDesk TCP 7070   │
+│  ├─ 원격 7070 진단       │                │ 무인 접속 인증     │
+│  └─ AnyDesk 실행         │                └────────────────────┘
+│ Tailscale + AnyDesk      │                         ▲
+└────────────┬────────────┘                         │
+             └──── Tailscale 암호화 네트워크 ──────┘
+                   직접 연결 또는 관리형 릴레이
 ```
 
-초기 배포는 공인 IP가 있는 별도 WireGuard 허브를 두고 각 장치가 허브로 접속하는 방식을 전제로 합니다. NAT 통과, P2P 연결 조정, 릴레이 서버는 이번 알파 범위에 포함하지 않습니다.
-
-## 현재 제공 기능
-
-- Windows WireGuard 터널 서비스 상태 확인
-- 기존 터널 서비스 시작 및 종료
-- `.conf` 또는 `.conf.dpapi`를 통한 최초 터널 서비스 설치
-- 원격 VPN IPv4의 TCP 7070 연결 진단
-- 진단 성공 후 AnyDesk 직접 연결 실행
-- WireGuard 및 AnyDesk 표준 설치 경로 자동 검색
-- 로컬 설정 저장과 입력값 검증
-- 한국어 상태 대시보드와 연결 설정 화면
-
-## 지원 범위
-
-| 구분 | 현재 상태 |
-| --- | --- |
-| GUI 실행 환경 | Windows 11 amd64 |
-| VPN 엔진 | 공식 WireGuard for Windows |
-| 원격 대상 | WireGuard와 AnyDesk가 준비된 Windows 11 PC |
-| 화면 제어 | AnyDesk 직접 연결, TCP 7070 |
-| macOS/Linux GUI | 계획됨, 미구현 |
-| VPN 허브·키 자동 발급 | 계획됨, 미구현 |
-| 자체 NAT 통과·릴레이 | 장기 검토 |
-| AnyDesk 인증 자동화 | 의도적으로 제외 |
+RemoteBridge가 화면 데이터를 중계하지는 않는다. Tailscale이 네트워크 경로를 만들고, AnyDesk가 사용자 인증과 화면·키보드·마우스 전송을 담당한다.
 
 ## 빠른 실행
 
-### 1. 사전 준비
+### 1. 두 PC 준비
 
-로컬 Windows 11 PC에 다음 프로그램을 설치합니다.
+제어 PC와 원격 PC에 다음 프로그램을 설치한다.
 
-- 공식 WireGuard for Windows
+- [Tailscale for Windows](https://tailscale.com/download/windows)
 - 설치형 AnyDesk
-- WebView2 Runtime — Windows 11에는 일반적으로 포함됨
 
-원격 Windows 11 PC에서는 WireGuard 터널과 AnyDesk 무인 접속을 별도로 설정하고, AnyDesk의 직접 연결 허용 및 TCP 7070 방화벽 규칙을 준비해야 합니다.
+두 PC를 같은 Tailnet에 로그인한다. 원격 PC에는 AnyDesk 무인 접속을 설정하고 직접 연결을 허용한다. 필요한 경우 Windows 방화벽에서 Tailscale 네트워크의 TCP 7070을 허용한다.
 
-### 2. 프로그램 실행
+### 2. 원격 주소 확인
 
-빌드된 파일을 실행합니다.
+Tailscale 관리 콘솔의 Machines 화면에서 원격 PC의 다음 값 중 하나를 확인한다.
+
+- Tailscale IPv4: 예) `100.64.1.2`
+- MagicDNS 이름: 예) `academy-pc`
+- 전체 MagicDNS 이름: 예) `academy-pc.example.ts.net`
+
+### 3. 프로그램 실행
 
 ```powershell
 .\desktop\build\bin\RemoteBridge.exe
 ```
 
-첫 실행 시 자동으로 열리는 설정 화면에 다음 값을 입력합니다.
+첫 설정 화면에 다음 값을 입력한다.
 
-| 항목 | 설명 | 예시 |
-| --- | --- | --- |
-| 장치 이름 | 화면에 표시할 원격 PC 이름 | `Academy PC` |
-| VPN 내부 IPv4 | WireGuard가 원격 PC에 할당한 주소 | `10.88.0.2` |
-| 터널 이름 | WireGuard 터널 서비스 이름 | `academy` |
-| WireGuard 설정 파일 | 로컬 `.conf` 또는 `.conf.dpapi` 절대 경로 | `C:\ProgramData\RemoteBridge\academy.conf.dpapi` |
-| WireGuard 실행 파일 | 비워 두면 표준 경로에서 검색 | 선택 사항 |
-| AnyDesk 실행 파일 | 비워 두면 표준 경로에서 검색 | 선택 사항 |
+| 항목 | 예시 |
+| --- | --- |
+| 장치 이름 | `Academy PC` |
+| 원격 Tailscale 주소 | `academy-pc` 또는 `100.64.1.2` |
+| Tailscale 실행 파일 | 표준 설치라면 비움 |
+| AnyDesk 실행 파일 | 표준 설치라면 비움 |
 
-설정을 저장한 뒤 **연결하고 AnyDesk 열기**를 누릅니다. 최초 터널 설치와 서비스 시작·종료에는 Windows 관리자 권한이 필요할 수 있습니다.
+설정을 저장하고 **연결하고 AnyDesk 열기**를 누른다. Tailscale 로그인이 필요하다는 메시지가 나오면 공식 Tailscale 앱에서 로그인한 후 다시 시도한다.
 
-실제 설정은 `%AppData%\RemoteBridge\config.json`에 저장됩니다. 이 파일에는 WireGuard 개인키나 AnyDesk 암호가 아니라 실행 경로와 연결 대상만 들어갑니다.
+자세한 실행 및 빌드 방법은 [desktop/README.md](desktop/README.md)를 참고한다.
 
-## 개발 및 빌드
+## 상태 판정
 
-요구 사항:
+| 표시 | 의미 |
+| --- | --- |
+| Tailscale 연결됨 | 로컬 Tailscale `BackendState`가 `Running` |
+| 원격 PC 응답함 | 원격 주소의 TCP 7070 연결 성공 |
+| AnyDesk 준비됨 | 로컬 AnyDesk 실행 파일 발견 |
+| AnyDesk 실행 | 실행 요청 전달 완료. 인증·화면 연결 성공과는 구분 |
 
-- Go 1.25 이상
-- Node.js와 npm
-- Wails CLI v2.15
-- Windows용 WebView2 개발 환경
+## 개발과 빌드
 
 ```powershell
-git clone https://github.com/hyeseong-dev/korea_it_remote_con.git
-cd korea_it_remote_con
-git fetch origin feature/windows-gui-go
-git switch --track origin/feature/windows-gui-go
-
-go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
 cd desktop
 npm --prefix frontend install
 go test ./...
-go vet ./...
 wails build -clean -platform windows/amd64 -webview2 embed
 ```
 
-빌드 결과는 `desktop/build/bin/RemoteBridge.exe`입니다. 자세한 개발 방법과 설정 위치는 [desktop/README.md](desktop/README.md)를 참고하세요.
+빌드 결과:
 
-## 보안 원칙
+```text
+desktop/build/bin/RemoteBridge.exe
+```
 
-- WireGuard 개인키, 실제 `.conf`, `.conf.dpapi`, AnyDesk 암호를 커밋하지 않습니다.
-- 앱은 VPN 암호화나 AnyDesk 인증을 직접 구현하지 않습니다.
-- 외부 프로그램은 셸 문자열이 아니라 검증된 실행 파일과 인자 배열로 실행합니다.
-- AnyDesk는 VPN 내부 주소의 TCP 7070 응답이 확인된 경우에만 실행합니다.
-- 원격 Windows 방화벽은 가능하면 WireGuard 인터페이스와 VPN 대역에서만 7070을 허용합니다.
+## 보안 경계
 
-## 저장소와 브랜치
+- Tailscale 인증키나 로그인 정보를 앱 설정에 저장하지 않는다.
+- AnyDesk 암호를 앱 설정이나 실행 인수에 넣지 않는다.
+- 원격 주소는 IPv4 또는 안전한 호스트 이름 형식만 허용한다.
+- 외부 실행은 셸 문자열이 아닌 검증된 실행 파일과 인자 배열을 사용한다.
+- TCP 7070은 가능하면 Tailscale 네트워크에서만 허용한다.
 
-저장소: `hyeseong-dev/korea_it_remote_con`
+## 버전과 브랜치
 
 | 버전 | 브랜치 | 역할 |
 | --- | --- | --- |
-| `v1.0.0` | `main` | 보존된 Mac 전용 실행기 기준 버전 |
-| `v2.0.0` | `feature/portable-access-v2` | Tailscale + AnyDesk 기반 Python 공통 CLI |
-| `v3.0.0-alpha.1` | `feature/windows-gui-go` | WireGuard + AnyDesk 기반 Windows Go GUI |
+| `v1.0.0` | `main` | Mac 전용 실행기 기준 버전 |
+| `v2.0.0` | `feature/portable-access-v2` | Tailscale + AnyDesk 기반 Python CLI |
+| `v3.0.0-alpha.1` | `feature/windows-gui-go` | 자체 WireGuard 허브를 가정한 Windows GUI 실험 |
+| `v3.0.0-alpha.2` | `feature/windows-gui-tailscale` | Tailscale + AnyDesk 기반 Windows GUI |
 
-`feature/windows-gui-go`는 GitHub 원격 브랜치로 공개되어 있으며, 위 명령으로 다른 PC에서도 동일한 개발 버전을 체크아웃할 수 있습니다.
+## 현재 제한
 
-기존 Python CLI와 실행기는 이 브랜치에서도 제거하지 않았습니다. v2의 기준 구현과 설명은 `feature/portable-access-v2` 브랜치에서 확인할 수 있습니다.
-
-## 디렉터리
-
-```text
-desktop/                    Go/Wails Windows GUI
-  frontend/                 TypeScript 화면
-  internal/bridge/          설정, 진단, WireGuard·AnyDesk 제어
-  config.example.json       공개 가능한 설정 형식 예시
-remote_access/              기존 Python v2 코어
-tests/                      기존 Python v2 테스트
-docs/REMOTE_BRIDGE_PLAN.md  v3 제품 기획 및 로드맵
-```
-
-## 알려진 제한
-
-- 실제 VPS WireGuard 허브 및 운영 키가 없으면 원격 연결은 완료되지 않습니다.
-- 터널 설치·서비스 제어는 Windows 권한 정책에 따라 관리자 실행이 필요합니다.
-- `launched` 또는 GUI의 실행 완료 문구는 AnyDesk 인증과 화면 연결 성공을 보장하지 않습니다.
-- Windows 재부팅 복구, 키 교체, 허브 장애 전환과 설치 프로그램 배포는 아직 검증하지 않았습니다.
+- Windows 11 amd64만 실제 배포 대상으로 한다.
+- 원격 프로필 하나만 저장한다.
+- Tailscale과 AnyDesk의 설치 및 최초 로그인은 자동화하지 않는다.
+- 원격 PC가 꺼져 있거나 AnyDesk 7070이 차단되면 실행하지 않는다.
+- 현재 Windows 11 두 대의 실제 인터넷 연결 검증은 남아 있다.
